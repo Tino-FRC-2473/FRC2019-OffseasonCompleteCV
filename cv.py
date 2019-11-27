@@ -5,6 +5,9 @@ import subprocess
 import imghdr
 import traceback
 import os
+import random
+from matplotlib import pyplot as plt
+
 
 # finds angle between robot's heading and the perpendicular to the targets
 class VisionTargetDetector:
@@ -33,12 +36,12 @@ class VisionTargetDetector:
 
 
 		rgb_data = np.loadtxt('green_data.csv', dtype= np.uint8, delimiter=',')
-		self.bgr_data = np.copy(rgb_data) 
-		self.bgr_data[:,0] = rgb_data[:,2]
-		self.bgr_data[:,2] = rgb_data[:,0]
+		bgr_data = np.copy(rgb_data) 
+		bgr_data[:,0] = rgb_data[:,2]
+		bgr_data[:,2] = rgb_data[:,0]
 
 
-		self.bgr_data = np.reshape(bgr_data, (79, 1, 3))
+		bgr_data = np.reshape(bgr_data, (79, 1, 3))
 
 		self.true_green_vals = cv2.cvtColor(bgr_data, cv2.COLOR_BGR2HSV)
 
@@ -128,19 +131,19 @@ class VisionTargetDetector:
 
 
 
-	def get_new_hsv(res):
+	def get_new_hsv(self, res):
 		if(len(res) == 0):
 			return self.low_green, self.high_green
 		
 
 		for i in range(100):
 			row=random.randrange(0,len(res))
-			self.true_green_vals = np.append(true_green_vals, np.reshape(np.array(res[row]), (1, 1, 3)), 0)
+			self.true_green_vals = np.append(self.true_green_vals, np.reshape(np.array(res[row]), (1, 1, 3)), 0)
 
 			
-		h=true_green_vals[:,:,0]
-		s=true_green_vals[:,:,1]
-		v=true_green_vals[:,:,2]
+		h=self.true_green_vals[:,:,0]
+		s=self.true_green_vals[:,:,1]
+		v=self.true_green_vals[:,:,2]
 
 		plt.figure()
 
@@ -161,14 +164,12 @@ class VisionTargetDetector:
 		# high_green= np.array([87,255,229])
 
 		# isolate the desired shades of green
-		mask = cv2.inRange(hsv, low_green, high_green)
-
+		mask = cv2.inRange(hsv, self.low_green, self.high_green)
+		_, contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 		greens=hsv[np.where((mask==255))]
-
-    	self.low_green, self.high_green = self.get_new_hsv(greens)
-
-		contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
+		print(len(greens))
+		self.low_green, self.high_green = self.get_new_hsv(greens)
+		
 		# sort contours by x-coordinate
 		contours.sort(key = lambda countour: cv2.boundingRect(countour)[0])
 
